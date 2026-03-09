@@ -4,6 +4,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -61,21 +62,9 @@ func (p *MattermostToolProvider) getTeamTools() []MCPTool {
 }
 
 // getDevTeamTools returns development team-related tools for MCP
+// Disabled per configuration request; no tools returned.
 func (p *MattermostToolProvider) getDevTeamTools() []MCPTool {
-	return []MCPTool{
-		{
-			Name:        "create_team",
-			Description: "Create a new team (dev mode only)",
-			Schema:      NewJSONSchemaForAccessMode[CreateTeamArgs](string(p.accessMode)),
-			Resolver:    p.toolCreateTeam,
-		},
-		{
-			Name:        "add_user_to_team",
-			Description: "Add a user to a team (dev mode only)",
-			Schema:      NewJSONSchemaForAccessMode[AddUserToTeamArgs](string(p.accessMode)),
-			Resolver:    p.toolAddUserToTeam,
-		},
-	}
+	return []MCPTool{}
 }
 
 // toolGetTeamInfo implements the get_team_info tool
@@ -91,7 +80,7 @@ func (p *MattermostToolProvider) toolGetTeamInfo(mcpContext *MCPToolContext, arg
 		return "client not available", fmt.Errorf("client not available in context")
 	}
 	client := mcpContext.Client
-	ctx := mcpContext.Ctx
+	ctx := context.Background()
 
 	var team *model.Team
 
@@ -192,7 +181,7 @@ func (p *MattermostToolProvider) toolGetTeamMembers(mcpContext *MCPToolContext, 
 		return "client not available", fmt.Errorf("client not available in context")
 	}
 	client := mcpContext.Client
-	ctx := mcpContext.Ctx
+	ctx := context.Background()
 
 	// Get team members
 	members, _, err := client.GetTeamMembers(ctx, args.TeamID, args.Page, args.Limit, "")
@@ -269,7 +258,7 @@ func (p *MattermostToolProvider) toolCreateTeam(mcpContext *MCPToolContext, args
 		return "client not available", fmt.Errorf("client not available in context")
 	}
 	client := mcpContext.Client
-	ctx := mcpContext.Ctx
+	ctx := context.Background()
 
 	// Create the team
 	team := &model.Team{
@@ -330,7 +319,7 @@ func (p *MattermostToolProvider) toolAddUserToTeam(mcpContext *MCPToolContext, a
 		return "client not available", fmt.Errorf("client not available in context")
 	}
 	client := mcpContext.Client
-	ctx := mcpContext.Ctx
+	ctx := context.Background()
 
 	// Add user to team
 	_, _, err = client.AddTeamMember(ctx, args.TeamID, args.UserID)
