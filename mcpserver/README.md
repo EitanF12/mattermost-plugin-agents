@@ -121,6 +121,7 @@ Add a user to a channel.
 - **Parameters:** `user_id`, `channel_id`
 
 #### `create_post_as_user`
+> **Note:** development-only tool has been disabled and is no longer available.
 Create a post as a specific user using username/password login. Simply provide the username and password of created users.
 
 - **Parameters:** 

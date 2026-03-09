@@ -4,6 +4,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mattermost/mattermost-plugin-ai/llm"
@@ -22,15 +23,9 @@ type CreateUserArgs struct {
 }
 
 // getDevUserTools returns development user-related tools for MCP
+// Dev tools have been disabled; return no tools regardless of mode.
 func (p *MattermostToolProvider) getDevUserTools() []MCPTool {
-	return []MCPTool{
-		{
-			Name:        "create_user",
-			Description: "Create a new user account (dev mode only)",
-			Schema:      NewJSONSchemaForAccessMode[CreateUserArgs](string(p.accessMode)),
-			Resolver:    p.toolCreateUser,
-		},
-	}
+	return []MCPTool{}
 }
 
 // toolCreateUser implements the create_user tool using the context client
@@ -57,7 +52,7 @@ func (p *MattermostToolProvider) toolCreateUser(mcpContext *MCPToolContext, args
 		return "client not available", fmt.Errorf("client not available in context")
 	}
 	client := mcpContext.Client
-	ctx := mcpContext.Ctx
+	ctx := context.Background()
 
 	// Create the user
 	user := &model.User{

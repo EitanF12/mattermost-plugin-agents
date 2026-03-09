@@ -19,9 +19,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// MCPToolContext provides MCP-specific functionality with the authenticated client.
+// MCPToolContext provides MCP-specific functionality with the authenticated client
 type MCPToolContext struct {
-	Ctx        context.Context
 	Client     *model.Client4
 	AccessMode AccessMode
 	BotUserID  string // User ID for AI-generated content tracking: Bot ID (embedded) or authenticated user ID (external servers)
@@ -73,7 +72,7 @@ func NewMattermostToolProvider(authProvider auth.AuthenticationProvider, logger 
 	}
 }
 
-// ProvideTools registers all available MCP tools with the server.
+// ProvideTools provides all tools to the MCP server by registering them
 func (p *MattermostToolProvider) ProvideTools(mcpServer *mcp.Server) {
 	mcpTools := []MCPTool{}
 
@@ -95,7 +94,7 @@ func (p *MattermostToolProvider) ProvideTools(mcpServer *mcp.Server) {
 	}
 }
 
-// registerDynamicTool registers a single tool with the MCP server.
+// registerDynamicTool registers a single tool with the server using type erasure
 func (p *MattermostToolProvider) registerDynamicTool(server *mcp.Server, mcpTool MCPTool) {
 	tool := &mcp.Tool{
 		Name:        mcpTool.Name,
@@ -119,9 +118,6 @@ func (p *MattermostToolProvider) registerDynamicTool(server *mcp.Server, mcpTool
 	}
 
 	handler := func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Log tool invocation
-		p.logger.Debug("MCP tool called", "tool", mcpTool.Name)
-
 		// Create MCP context from the authenticated client, passing along any metadata
 		mcpContext, err := p.createMCPToolContext(ctx, req.Params.Meta)
 		if err != nil {
@@ -153,7 +149,7 @@ func (p *MattermostToolProvider) registerDynamicTool(server *mcp.Server, mcpTool
 		// Call the tool resolver
 		result, err := mcpTool.Resolver(mcpContext, argsGetter)
 		if err != nil {
-			p.logger.Debug("MCP tool failed", "tool", mcpTool.Name, "error", err.Error())
+			p.logger.Debug("Tool resolver failed", "tool", mcpTool.Name, "error", err)
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
 					&mcp.TextContent{Text: "Error: " + err.Error()},
@@ -161,9 +157,6 @@ func (p *MattermostToolProvider) registerDynamicTool(server *mcp.Server, mcpTool
 				IsError: true,
 			}, nil
 		}
-
-		// Log successful completion
-		p.logger.Debug("MCP tool completed successfully", "tool", mcpTool.Name)
 
 		// Return successful result
 		return &mcp.CallToolResult{
@@ -186,7 +179,6 @@ func (p *MattermostToolProvider) createMCPToolContext(ctx context.Context, metad
 	}
 
 	mcpContext := &MCPToolContext{
-		Ctx:        ctx,
 		Client:     client,
 		AccessMode: p.accessMode,
 	}
