@@ -9,12 +9,9 @@ import (
 	"os"
 	"strconv"
 	"sync/atomic"
-	"time"
 
 	"github.com/mattermost/mattermost-plugin-ai/embeddings"
 	"github.com/mattermost/mattermost-plugin-ai/llm"
-	"github.com/mattermost/mattermost-plugin-ai/mcp"
-	"github.com/mattermost/mattermost-plugin-ai/openai"
 )
 
 const (
@@ -36,7 +33,7 @@ type Config struct {
 	EnableChannelMentionToolCalling bool                             `json:"enableChannelMentionToolCalling"`
 	AllowNativeWebSearchInChannels  bool                             `json:"allowNativeWebSearchInChannels"`
 	EmbeddingSearchConfig           embeddings.EmbeddingSearchConfig `json:"embeddingSearchConfig"`
-	MCP                             mcp.Config                       `json:"mcp"`
+	MCP                             MCPConfig                        `json:"mcp"`
 	WebSearch                       WebSearchConfig                  `json:"webSearch"`
 }
 
@@ -159,7 +156,7 @@ func parseBooleanEnv(key string) (bool, bool) {
 	return parsed, true
 }
 
-func (c *Container) MCP() mcp.Config {
+func (c *Container) MCP() MCPConfig {
 	return c.cfg.Load().MCP
 }
 
@@ -239,36 +236,4 @@ func DeepCopyJSON[T any](src T) (T, error) {
 	}
 	err = json.Unmarshal(data, &dst)
 	return dst, err
-}
-
-func OpenAIConfigFromServiceConfig(serviceConfig llm.ServiceConfig, botConfig llm.BotConfig) openai.Config {
-	streamingTimeout := time.Second * 30
-	if serviceConfig.StreamingTimeoutSeconds > 0 {
-		streamingTimeout = time.Duration(serviceConfig.StreamingTimeoutSeconds) * time.Second
-	}
-
-	return openai.Config{
-		APIKey:             serviceConfig.APIKey,
-		APIURL:             serviceConfig.APIURL,
-		OrgID:              serviceConfig.OrgID,
-		DefaultModel:       serviceConfig.DefaultModel,
-		InputTokenLimit:    serviceConfig.InputTokenLimit,
-		OutputTokenLimit:   serviceConfig.OutputTokenLimit,
-		StreamingTimeout:   streamingTimeout,
-		SendUserID:         serviceConfig.SendUserID,
-		UseResponsesAPI:    serviceConfig.UseResponsesAPI,
-		EnabledNativeTools: botConfig.EnabledNativeTools,
-		ReasoningEnabled:   botConfig.ReasoningEnabled,
-		ReasoningEffort:    botConfig.ReasoningEffort,
-	}
-}
-
-// OpenAIConfigFromServiceConfigWithOptions creates an OpenAI config with additional options for OpenAI-compatible APIs.
-// SendUserID is preserved from the operator's service config rather than overridden here;
-// providers that don't support it should hide the toggle in the UI so it defaults to false.
-func OpenAIConfigFromServiceConfigWithOptions(serviceConfig llm.ServiceConfig, botConfig llm.BotConfig, disableStreamOptions bool, useMaxTokens bool) openai.Config {
-	cfg := OpenAIConfigFromServiceConfig(serviceConfig, botConfig)
-	cfg.DisableStreamOptions = disableStreamOptions
-	cfg.UseMaxTokens = useMaxTokens
-	return cfg
 }
