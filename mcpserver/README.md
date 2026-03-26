@@ -69,33 +69,6 @@ Get information about a channel. If you have a channel ID, use that for fastest 
 - `channel_display_name` + `team_id`: The human-readable display name users see (e.g. 'General Discussion')  
 - `channel_name` + `team_id`: The URL-friendly channel name (e.g. 'general-discussion')
 
-### `get_team_info`
-Get information about a team. If you have a team ID, use that for fastest lookup. If the user provides a human-readable name, try team_display_name first (what users see in the UI), then team_name (URL name) as fallback.
-
-**Parameters:**
-- `team_id`: The exact team ID (fastest, most reliable method)
-- `team_display_name`: The human-readable display name users see (e.g. 'Engineering Team')
-- `team_name`: The URL-friendly team name (e.g. 'engineering-team')
-
-### `search_users`
-Search for existing users by username, email, or name.
-
-**Parameters:**
-- `term` (required): Search term (username, email, first name, or last name)
-- `limit` (optional): Maximum number of results to return (default: 20, max: 100)
-
-### `get_channel_members`
-Get all members of a specific channel with their details.
-
-**Parameters:**
-- `channel_id` (required): ID of the channel to get members for
-
-### `get_team_members`
-Get all members of a specific team with their details.
-
-**Parameters:**
-- `team_id` (required): ID of the team to get members for
-
 ### Development Tools (Dev Mode Only)
 
 The following tools are only available when the `-dev` flag is enabled:

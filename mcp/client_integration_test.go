@@ -92,33 +92,6 @@ func TestClient_CallTool_ReadChannel(t *testing.T) {
 	t.Logf("Tool result:\n%s", result)
 }
 
-// TestClient_CallTool_SearchUsers tests search_users with output validation
-func TestClient_CallTool_SearchUsers(t *testing.T) {
-	suite := GetSharedTestSuite(t)
-	suite.SetupEmbeddedServer()
-
-	ctx := context.Background()
-
-	user, session := suite.CreateUserAndSession(t)
-
-	// Create client
-	client := suite.CreateClient(t, user, session)
-	defer client.Close()
-
-	// Call tool
-	result, err := client.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
-	})
-	require.NoError(t, err, "CallTool should succeed")
-
-	// Validate output content
-	assert.NotEmpty(t, result, "Result should not be empty")
-	assert.Contains(t, result, user.Username, "Result should contain username")
-	assert.Contains(t, result, user.Email, "Result should contain email")
-
-	t.Logf("Search results:\n%s", result)
-}
-
 // TestClient_CallTool_ReadPost tests read_post with proper output validation
 func TestClient_CallTool_ReadPost(t *testing.T) {
 	suite := GetSharedTestSuite(t)
@@ -215,22 +188,22 @@ func TestClient_Reconnection(t *testing.T) {
 	defer client.Close()
 
 	// First call should work
-	result1, err := client.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
+	result1, err := client.CallTool(ctx, "search_posts", map[string]any{
+		"query": "hello",
 	})
 	require.NoError(t, err, "First call should succeed")
-	assert.Contains(t, result1, user.Username, "First result should contain username")
+	assert.NotEmpty(t, result1, "First result should not be empty")
 
 	// Close the underlying session to simulate connection loss
 	client.session.Close()
 
 	// Second call should automatically reconnect and succeed
 	// This tests the reconnection logic in Client.CallTool()
-	result2, err := client.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
+	result2, err := client.CallTool(ctx, "search_posts", map[string]any{
+		"query": "hello",
 	})
 	require.NoError(t, err, "Second call should succeed after reconnection")
-	assert.Contains(t, result2, user.Username, "Second result should contain username")
+	assert.NotEmpty(t, result2, "Second result should not be empty")
 
 	t.Log("Successfully reconnected and executed tool after connection loss")
 }
@@ -255,7 +228,6 @@ func TestClient_Tools(t *testing.T) {
 		"read_channel",
 		"get_channel_info",
 		"search_posts",
-		"search_users",
 		"read_post",
 	}
 

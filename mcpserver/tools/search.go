@@ -36,12 +36,6 @@ type KeywordOnlySearchArgs struct {
 	KeywordOffset int    `json:"keyword_offset,omitempty" jsonschema:"Offset for keyword search pagination,minimum=0"`
 }
 
-// SearchUsersArgs represents arguments for the search_users tool.
-type SearchUsersArgs struct {
-	Term  string `json:"term" jsonschema:"Search term (username, email, first name, or last name),minLength=1,maxLength=64"`
-	Limit int    `json:"limit,omitempty" jsonschema:"Maximum number of results to return (default: 20, max: 100),minimum=1,maximum=100"`
-}
-
 // getSearchTools returns all search-related tools.
 func (p *MattermostToolProvider) getSearchTools() []MCPTool {
 	semanticEnabled := p.searchService != nil && p.searchService.Enabled()
@@ -70,12 +64,6 @@ func (p *MattermostToolProvider) getSearchTools() []MCPTool {
 			Description: description,
 			Schema:      schema,
 			Resolver:    p.toolCombinedSearch,
-		},
-		{
-			Name:        "search_users",
-			Description: "Search for existing users by username, email, or name. Parameters: term (required search text), limit (1-100, default 20). Returns user details including username, email, display name, and position for matching users. Example: {\"term\": \"john\", \"limit\": 5}",
-			Schema:      llm.NewJSONSchemaFromStruct[SearchUsersArgs](),
-			Resolver:    p.toolSearchUsers,
 		},
 	}
 }
@@ -451,70 +439,4 @@ func (p *MattermostToolProvider) formatSingleResult(result *strings.Builder, ind
 	fmt.Fprintf(result, "Message: %s\n\n", r.Post.Message)
 }
 
-// toolSearchUsers implements the search_users tool.
-func (p *MattermostToolProvider) toolSearchUsers(mcpContext *MCPToolContext, argsGetter llm.ToolArgumentGetter) (string, error) {
-	var args SearchUsersArgs
-	err := argsGetter(&args)
-	if err != nil {
-		return "invalid parameters to function", fmt.Errorf("failed to get arguments for tool search_users: %w", err)
-	}
 
-	if args.Term == "" {
-		return "term is required", fmt.Errorf("search term cannot be empty")
-	}
-
-	if args.Limit <= 0 {
-		args.Limit = 20
-	}
-	if args.Limit > 100 {
-		args.Limit = 100
-	}
-
-	if mcpContext.Client == nil {
-		return "client not available", fmt.Errorf("client not available in context")
-	}
-	client := mcpContext.Client
-	ctx := context.Background()
-
-	searchOptions := &model.UserSearch{
-		Term:          args.Term,
-		Limit:         args.Limit,
-		AllowInactive: false,
-		WithoutTeam:   false,
-	}
-
-	users, _, err := client.SearchUsers(ctx, searchOptions)
-	if err != nil {
-		return "user search failed", fmt.Errorf("error searching users: %w", err)
-	}
-
-	if len(users) == 0 {
-		return "no users found matching the search criteria", nil
-	}
-
-	var result strings.Builder
-	result.WriteString(fmt.Sprintf("Found %d users matching '%s':\n\n", len(users), args.Term))
-
-	for i, user := range users {
-		result.WriteString(fmt.Sprintf("**User %d**:\n", i+1))
-		result.WriteString(fmt.Sprintf("Username: %s\n", user.Username))
-		result.WriteString(fmt.Sprintf("ID: %s\n", user.Id))
-
-		if user.FirstName != "" || user.LastName != "" {
-			result.WriteString(fmt.Sprintf("Name: %s %s\n", user.FirstName, user.LastName))
-		}
-		if user.Email != "" {
-			result.WriteString(fmt.Sprintf("Email: %s\n", user.Email))
-		}
-		if user.Nickname != "" {
-			result.WriteString(fmt.Sprintf("Nickname: %s\n", user.Nickname))
-		}
-		if user.Position != "" {
-			result.WriteString(fmt.Sprintf("Position: %s\n", user.Position))
-		}
-
-		result.WriteString("\n")
-	}
-
-	return result.String(), nil
-}

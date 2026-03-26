@@ -81,19 +81,17 @@ func TestEmbeddedServer_MultipleConnectionsPerUser(t *testing.T) {
 	defer client2.Close()
 
 	// Both clients should be able to call tools independently
-	result1, err := client1.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
+	result1, err := client1.CallTool(ctx, "search_posts", map[string]any{
+		"query": "hello",
 	})
 	require.NoError(t, err, "First client should work")
 	assert.NotEmpty(t, result1)
-	assert.Contains(t, result1, user.Username)
 
-	result2, err := client2.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
+	result2, err := client2.CallTool(ctx, "search_posts", map[string]any{
+		"query": "hello",
 	})
 	require.NoError(t, err, "Second client should work")
 	assert.NotEmpty(t, result2)
-	assert.Contains(t, result2, user.Username)
 }
 
 // TestEmbeddedServer_SessionLifecycle tests the full lifecycle of a session connection
@@ -111,12 +109,11 @@ func TestEmbeddedServer_SessionLifecycle(t *testing.T) {
 	require.NotNil(t, client, "Client should be created")
 
 	// 2. Use connection
-	result, err := client.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
+	result, err := client.CallTool(ctx, "search_posts", map[string]any{
+		"query": "hello",
 	})
 	require.NoError(t, err, "Tool call should work")
 	assert.NotEmpty(t, result)
-	assert.Contains(t, result, user.Username)
 
 	// 3. Close connection
 	err = client.Close()
@@ -125,12 +122,11 @@ func TestEmbeddedServer_SessionLifecycle(t *testing.T) {
 	// 4. Verify auto-reconnect behavior - embedded clients automatically reconnect
 	// This is by design in client.go lines 263-278: when ErrConnectionClosed is detected,
 	// the client reconnects using the stored embeddedClient and sessionID
-	result2, err := client.CallTool(ctx, "search_users", map[string]any{
-		"term": user.Username,
+	result2, err := client.CallTool(ctx, "search_posts", map[string]any{
+		"query": "hello",
 	})
 	require.NoError(t, err, "Tool call should succeed after auto-reconnect")
 	assert.NotEmpty(t, result2)
-	assert.Contains(t, result2, user.Username)
 
 	t.Log("Successfully verified auto-reconnect behavior for embedded client")
 }
@@ -181,9 +177,9 @@ func TestEmbeddedServer_TokenResolverCalledAsNeeded(t *testing.T) {
 
 	// Make a tool call - this should trigger additional token resolution
 	_, err = mcpSession.CallTool(ctx, &mcp.CallToolParams{
-		Name: "search_users",
+		Name: "search_posts",
 		Arguments: map[string]interface{}{
-			"term": user.Username,
+			"query": "hello",
 		},
 	})
 	require.NoError(t, err)

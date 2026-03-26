@@ -40,13 +40,6 @@ type GetChannelInfoArgs struct {
 	TeamID             string `json:"team_id,omitempty" jsonschema:"Team ID (optional - if provided, searches within specific team; if omitted, searches across all teams),maxLength=26"`
 }
 
-// GetChannelMembersArgs represents arguments for the get_channel_members tool
-type GetChannelMembersArgs struct {
-	ChannelID string `json:"channel_id" jsonschema:"ID of the channel to get members for,minLength=26,maxLength=26"`
-	Limit     int    `json:"limit,omitempty" jsonschema:"Number of members to return (default: 50, max: 200),minimum=1,maximum=200"`
-	Page      int    `json:"page,omitempty" jsonschema:"Page number for pagination (default: 0),minimum=0"`
-}
-
 // AddUserToChannelArgs represents arguments for the add_user_to_channel tool
 type AddUserToChannelArgs struct {
 	UserID    string `json:"user_id" jsonschema:"ID of the user to add"`
@@ -67,12 +60,6 @@ func (p *MattermostToolProvider) getChannelTools() []MCPTool {
 			Description: "Get information about channel(s). Provide ONE parameter: channel_id (fastest, returns single result), channel_display_name (user-visible), or channel_name (URL name). Optional: team_id to limit search scope. If multiple channels match (e.g., 'General' exists in multiple teams), returns ALL matches with team context for disambiguation. Returns channel metadata including ID, names, type, team, purpose, and member count. Example: {\"channel_display_name\": \"General\"} or {\"channel_id\": \"h5wqm8kxptbztfgzpaxbsqozah\"}",
 			Schema:      llm.NewJSONSchemaFromStruct[GetChannelInfoArgs](),
 			Resolver:    p.toolGetChannelInfo,
-		},
-		{
-			Name:        "get_channel_members",
-			Description: "Get members of a channel with pagination support. Parameters: channel_id (required), limit (1-200, default 50), page (0+, default 0). Returns user details for each member including username, email, display name, and join date. Example: {\"channel_id\": \"h5wqm8kxptbztfgzpaxbsqozah\", \"limit\": 25, \"page\": 0}",
-			Schema:      llm.NewJSONSchemaFromStruct[GetChannelMembersArgs](),
-			Resolver:    p.toolGetChannelMembers,
 		},
 	}
 }
@@ -452,83 +439,6 @@ func (p *MattermostToolProvider) formatMultipleChannels(ctx context.Context, cli
 	result.WriteString("- Specify which team's channel you need\n")
 	result.WriteString("- Call get_channel_info again with the team_id parameter\n")
 	result.WriteString("- Use the specific channel_id from above in create_post\n")
-
-	return result.String(), nil
-}
-
-// toolGetChannelMembers implements the get_channel_members tool
-func (p *MattermostToolProvider) toolGetChannelMembers(mcpContext *MCPToolContext, argsGetter llm.ToolArgumentGetter) (string, error) {
-	var args GetChannelMembersArgs
-	err := argsGetter(&args)
-	if err != nil {
-		return "invalid parameters to function", fmt.Errorf("failed to get arguments for tool get_channel_members: %w", err)
-	}
-
-	// Validate required fields
-	if !model.IsValidId(args.ChannelID) {
-		return "invalid channel_id format", fmt.Errorf("channel_id must be a valid ID")
-	}
-
-	// Set defaults and validate
-	if args.Limit == 0 {
-		args.Limit = 50
-	}
-	if args.Limit > 200 {
-		args.Limit = 200
-	}
-	if args.Page < 0 {
-		args.Page = 0
-	}
-
-	// Get client from context
-	if mcpContext.Client == nil {
-		return "client not available", fmt.Errorf("client not available in context")
-	}
-	client := mcpContext.Client
-	ctx := context.Background()
-
-	// Get channel members
-	members, _, err := client.GetChannelMembers(ctx, args.ChannelID, args.Page, args.Limit, "")
-	if err != nil {
-		return "failed to fetch channel members", fmt.Errorf("error fetching channel members: %w", err)
-	}
-
-	if len(members) == 0 {
-		return "no members found in this channel", nil
-	}
-
-	// Get user details for each member
-	var result strings.Builder
-	result.WriteString(fmt.Sprintf("Channel Members (page %d, showing %d members):\n\n", args.Page, len(members)))
-
-	for i, member := range members {
-		user, _, err := client.GetUser(ctx, member.UserId, "")
-		if err != nil {
-			p.logger.Warn("failed to get user details for member", "user_id", member.UserId, "error", err)
-			result.WriteString(fmt.Sprintf("%d. User ID: %s (details unavailable)\n", i+1, member.UserId))
-			continue
-		}
-
-		result.WriteString(fmt.Sprintf("%d. **%s**", i+1, user.Username))
-
-		if user.FirstName != "" || user.LastName != "" {
-			result.WriteString(fmt.Sprintf(" (%s %s)", user.FirstName, user.LastName))
-		}
-
-		result.WriteString(fmt.Sprintf("\n   ID: %s\n", user.Id))
-
-		if user.Email != "" {
-			result.WriteString(fmt.Sprintf("   Email: %s\n", user.Email))
-		}
-
-		// Add role information
-		roles := strings.Split(member.Roles, " ")
-		if len(roles) > 0 && roles[0] != "" {
-			result.WriteString(fmt.Sprintf("   Roles: %s\n", strings.Join(roles, ", ")))
-		}
-
-		result.WriteString("\n")
-	}
 
 	return result.String(), nil
 }

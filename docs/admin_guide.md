@@ -479,10 +479,6 @@ The MCP server provides the following tools to AI agents and external clients:
 - **create_post**: Create new posts or replies in channels
 - **create_channel**: Create new public or private channels
 - **get_channel_info**: Retrieve channel details by ID or name
-- **get_team_info**: Retrieve team details by ID or name
-- **search_users**: Find users by username, email, or name
-- **get_channel_members**: List all members of a channel
-- **get_team_members**: List all members of a team
 
 ### Deployment
 
